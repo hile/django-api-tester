@@ -1,4 +1,6 @@
 
+import json
+
 from urllib.parse import urlencode
 
 from django.contrib.auth import get_user_model
@@ -105,6 +107,16 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
             return url_pattern.queryset[:expected_item_count]
         else:
             return url_pattern.queryset
+
+    def load_json_test_data(self, filename):
+        """
+        Load test JSON data with relative filename
+        """
+
+        try:
+            return json.loads(open(filename, 'r').read())
+        except Exception as e:
+            raise OSError('Error loading {}: {}'.format(filename, e))
 
     def validate_option_list(self, data):
         """
@@ -291,7 +303,6 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         res = self.client.get(url)
         self.assertEqual(res.status_code, expected_failure_code)
 
-        print('get_login_arguments', user, password, self.get_login_arguments(user, password))
         # Login and get page as user, check expected status code
         self.client.login(**self.get_login_arguments(user, password))
         res = self.client.get(url)
@@ -311,3 +322,116 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
             )
 
         return res, url_pattern, serializer
+
+    def create_record(self, user, password, view_name, data):
+        """
+        Create a new record with POST to API and validate results
+        """
+
+        url = reverse(view_name)
+
+        self.client.logout()
+        res = self.client.post(url, data)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.client.login(**self.get_login_arguments(user, password))
+        res = self.client.post(url, data)
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+
+        record = json.loads(res.content)
+        self.compare_record_to_data(record, data)
+
+        return record
+
+    def update_record(self, user, password, view_name, record_id, data):
+        """
+        Update a new record with POST to API and validate results
+        """
+
+        url = '{}/{}'.format(reverse(view_name), record_id)
+
+        self.client.logout()
+        res = self.client.post(url, data)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.client.login(**self.get_login_arguments(user, password))
+        res = self.client.put(url, data)
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+
+        record = json.loads(res.content)
+        self.compare_record_to_data(record, data)
+
+        return record
+
+    def compare_record_to_data(self, record, data):
+        testserver_url_prefix = 'http://testserver'
+
+        for key, value in data.items():
+            if key not in record:
+                raise ValidationError('Key {} not found in record {}'.format(key, record))
+
+            if isinstance(record[key], str):
+                # Hyperlinked fields have full link in record, relative link in data
+                if record[key][:len(testserver_url_prefix)] == testserver_url_prefix:
+                    record[key] = record[key][len(testserver_url_prefix):]
+
+            if value == 'true':
+                self.assertEqual(record[key], True, '{}=True {}'.format(key, record))
+            elif value == 'false':
+                self.assertEqual(record[key], False, '{}=False {}'.format(key, record))
+            else:
+                self.assertEqual(record[key], value, '{}={} {}'.format(key, value, record))
+
+    def delete_record(self, user, password, view_name, record_id):
+        """
+        Delete record from database
+        """
+
+        url = '{}/{}'.format(reverse(view_name), record_id)
+
+        self.client.logout()
+        res = self.client.delete(url)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.client.login(**self.get_login_arguments(user, password))
+        res = self.client.delete(url)
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+
+    def validate_create_record_permission_denied(self, user, password, view_name, data):
+        """
+        Validate we get permission denied message when trying to create record as
+        unauthorized user
+        """
+
+        url = reverse(view_name)
+
+        self.client.logout()
+        self.client.login(**self.get_login_arguments(user, password))
+        res = self.client.post(url, data)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
+
+    def validate_update_record_permission_denied(self, user, password, view_name, record_id, data):
+        """
+        Validate we get permission denied message when trying to create record as
+        unauthorized user
+        """
+
+        url = '{}/{}'.format(reverse(view_name), record_id)
+
+        self.client.logout()
+        self.client.login(**self.get_login_arguments(user, password))
+        res = self.client.put(url, data)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
+
+    def validate_delete_permission_denied(self, user, password, view_name, record_id):
+        """
+        Validate we get permission denied message when trying to create record as
+        unauthorized user
+        """
+
+        url = '{}/{}'.format(reverse(view_name), record_id)
+
+        self.client.logout()
+        self.client.login(**self.get_login_arguments(user, password))
+        res = self.client.delete(url)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
