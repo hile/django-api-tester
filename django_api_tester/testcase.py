@@ -8,6 +8,7 @@ from django.http import HttpResponseRedirect
 from django.test import TestCase as DjangoTestCase
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.serializers import ValidationError
 from rest_framework.test import APITestCase as DRFAPITestCase
 
@@ -60,6 +61,13 @@ class ModelTestCase(BaseTestCase, DjangoTestCase):
         Try creating invalid record, must raise ValidationError
         """
         with self.assertRaises(ValidationError):
+            self.serializer_class().validate(attrs)
+
+    def assertPermissionDeniedValidationError(self, attrs):
+        """
+        Try creating invalid record, must raise ValidationError
+        """
+        with self.assertRaises(PermissionDenied):
             self.serializer_class().validate(attrs)
 
 
@@ -117,6 +125,28 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
             return json.loads(open(filename, 'r').read())
         except Exception as e:
             raise OSError('Error loading {}: {}'.format(filename, e))
+
+    def compare_record_to_data(self, record, data):
+        """
+        Compare fields returned in response to expected data
+        """
+
+        testserver_url_prefix = 'http://testserver'
+        for key, value in data.items():
+            if key not in record:
+                raise ValidationError('Key {} not found in record {}'.format(key, record))
+
+            if isinstance(record[key], str):
+                # Hyperlinked fields have full link in record, relative link in data
+                if record[key][:len(testserver_url_prefix)] == testserver_url_prefix:
+                    record[key] = record[key][len(testserver_url_prefix):]
+
+            if value == 'true':
+                self.assertEqual(record[key], True, '{}=True {}'.format(key, record))
+            elif value == 'false':
+                self.assertEqual(record[key], False, '{}=False {}'.format(key, record))
+            else:
+                self.assertEqual(record[key], value, '{}={} {}'.format(key, value, record))
 
     def validate_option_list(self, data):
         """
@@ -363,25 +393,6 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
 
         return record
 
-    def compare_record_to_data(self, record, data):
-        testserver_url_prefix = 'http://testserver'
-
-        for key, value in data.items():
-            if key not in record:
-                raise ValidationError('Key {} not found in record {}'.format(key, record))
-
-            if isinstance(record[key], str):
-                # Hyperlinked fields have full link in record, relative link in data
-                if record[key][:len(testserver_url_prefix)] == testserver_url_prefix:
-                    record[key] = record[key][len(testserver_url_prefix):]
-
-            if value == 'true':
-                self.assertEqual(record[key], True, '{}=True {}'.format(key, record))
-            elif value == 'false':
-                self.assertEqual(record[key], False, '{}=False {}'.format(key, record))
-            else:
-                self.assertEqual(record[key], value, '{}={} {}'.format(key, value, record))
-
     def delete_record(self, user, password, view_name, record_id):
         """
         Delete record from database
@@ -396,6 +407,40 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         self.client.login(**self.get_login_arguments(user, password))
         res = self.client.delete(url)
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+
+
+    def get_record(self, user, password, view_name, record_id):
+        """
+        Get detail record with record_id
+        """
+
+        url = '{}/{}'.format(reverse(view_name), record_id)
+
+        self.client.logout()
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.client.login(**self.get_login_arguments(user, password))
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        record = json.loads(res.content)
+        return record
+
+    def validate_missing_record_not_found(self, user, password, view_name, record_id):
+        """
+        Validate getting a record with invalid ID, raising HTTP 404
+        """
+
+        url = '{}/{}'.format(reverse(view_name), record_id)
+
+        self.client.logout()
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.client.login(**self.get_login_arguments(user, password))
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
 
     def validate_create_record_permission_denied(self, user, password, view_name, data):
         """
