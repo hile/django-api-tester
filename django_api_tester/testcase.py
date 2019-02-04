@@ -148,7 +148,7 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
             else:
                 self.assertEqual(record[key], value, '{}={} {}'.format(key, value, record))
 
-    def validate_option_list(self, data):
+    def validate_option_list(self, data, expected_results_count=None):
         """
         Validate option list API response
 
@@ -157,9 +157,14 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         """
 
         self.assertIsInstance(data, tuple)
+
+        if expected_results_count is not None:
+            self.assertEqual(len(data), expected_results_count)
+
         for option in data:
             self.assertIsInstance(option, tuple)
             self.assertEqual(len(option), 2)
+
 
     def validate_record(self, record, serializer, fields, allow_null_value=()):
         """
@@ -441,6 +446,7 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         self.client.login(**self.get_login_arguments(user, password))
         res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+        return res
 
     def validate_create_record_permission_denied(self, user, password, view_name, data):
         """
@@ -454,6 +460,7 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         self.client.login(**self.get_login_arguments(user, password))
         res = self.client.post(url, data)
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
+        return res
 
     def validate_update_record_permission_denied(self, user, password, view_name, record_id, data):
         """
@@ -467,16 +474,17 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         self.client.login(**self.get_login_arguments(user, password))
         res = self.client.put(url, data)
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
+        return res
 
     def validate_delete_permission_denied(self, user, password, view_name, record_id):
         """
         Validate we get permission denied message when trying to create record as
         unauthorized user
         """
-
         url = '{}/{}'.format(reverse(view_name), record_id)
 
         self.client.logout()
         self.client.login(**self.get_login_arguments(user, password))
         res = self.client.delete(url)
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
+        return res
