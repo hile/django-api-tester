@@ -46,15 +46,17 @@ class ModelTestCase(BaseTestCase, DjangoTestCase):
 
     def create_valid_record(self, attrs):
         """
-        Create record after validating data
+        Create record with serializer's create method validating data
         """
-        validated_attrs = self.serializer_class().validate(attrs)
+        serializer = self.serializer_class()
+        validated_attrs = serializer.validate(attrs)
         self.assertIsInstance(
             validated_attrs,
             dict,
             'Serializer validate() did not return dictionary'
         )
-        return self.model.objects.create(**validated_attrs)
+        print('create', validated_attrs)
+        return serializer.create(validated_attrs)
 
     def assertInvalidRecordValidationError(self, attrs):
         """
@@ -446,6 +448,18 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         self.client.login(**self.get_login_arguments(user, password))
         res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+        return res
+
+    def validate_get_page_permission_denied(self, user, password, view_name):
+        """
+        Validate we get permission denied message when trying to get a page
+        """
+
+        url = reverse(view_name)
+        self.client.logout()
+        self.client.login(**self.get_login_arguments(user, password))
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
         return res
 
     def validate_create_record_permission_denied(self, user, password, view_name, data):
