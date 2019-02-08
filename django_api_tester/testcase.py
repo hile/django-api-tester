@@ -42,8 +42,13 @@ class ModelTestCase(BaseTestCase, DjangoTestCase):
     """
     Common unit test case for model specific django tests
     """
+    model = None
+    serializer_class = None
 
     def setUp(self):
+        for attr in ('model', 'serializer_class'):
+            if getattr(self, attr) is None:
+                raise NotImplementedError('ModelTestCase requires class variable {}'.format(attr))
         super().setUp()
 
     def create_valid_record(self, attrs):
@@ -79,7 +84,25 @@ class ModelTestCase(BaseTestCase, DjangoTestCase):
 class SerializerTestCase(BaseTestCase, DRFAPITestCase):
     """
     Common base test case for serializer specific django tests
+
+    To use this class you need to define class variable serializer_class to the
+    serializer class to test
     """
+    model = None
+    serializer_class = None
+
+    def setUp(self):
+        for attr in ('model', 'serializer_class'):
+            if getattr(self, attr) is None:
+                raise NotImplementedError('SerializerTestCase requires class variable {}'.format(attr))
+
+    def validate_serializing_list_of_items_to_dict(self, instances):
+        """
+        Validate serializer serializes list of specified items to dict
+        """
+        for instance in instances:
+            data = self.serializer_class(instance=instance).data
+            self.assertIsInstance(data, dict)
 
 
 @pytest.mark.api_tests
