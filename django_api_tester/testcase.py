@@ -48,7 +48,7 @@ class ModelTestCase(BaseTestCase, DjangoTestCase):
     def setUp(self):
         for attr in ('model', 'serializer_class'):
             if getattr(self, attr) is None:
-                raise NotImplementedError('ModelTestCase requires class variable {}'.format(attr))
+                raise NotImplementedError('ModelTestCase requires instance variable {}'.format(attr))
         super().setUp()
 
     def create_valid_record(self, attrs):
@@ -96,12 +96,18 @@ class SerializerTestCase(BaseTestCase, DRFAPITestCase):
             if getattr(self, attr) is None:
                 raise NotImplementedError('SerializerTestCase requires class variable {}'.format(attr))
 
-    def validate_serializing_list_of_items_to_dict(self, instances):
+    def validate_serializing_list_of_items_to_dict(self, instances, context=None):
         """
         Validate serializer serializes list of specified items to dict
+
+        Normally instances is a queryset of models, but may be just a list for non-model
+        serializers
         """
         for instance in instances:
-            data = self.serializer_class(instance=instance).data
+            if context is not None:
+                data = self.serializer_class(instance=instance, context=context).data
+            else:
+                data = self.serializer_class(instance=instance).data
             self.assertIsInstance(data, dict)
 
 
