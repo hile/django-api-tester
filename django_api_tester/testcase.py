@@ -5,6 +5,7 @@ import pytest
 from urllib.parse import urlencode
 
 from django.contrib.auth import get_user_model
+from django.db.models import QuerySet
 from django.http import HttpResponseRedirect
 from django.test import TestCase as DjangoTestCase
 from django.urls import reverse
@@ -103,6 +104,16 @@ class SerializerTestCase(BaseTestCase, DRFAPITestCase):
         Normally instances is a queryset of models, but may be just a list for non-model
         serializers
         """
+
+        if isinstance(instances, QuerySet):
+            if instances.count() == 0:
+                raise ValueError('Tested queryset is empty')
+        elif isinstance(instances, list) or isinstance(instances, tuple):
+            if len(instances) == 0:
+                raise ValueError('No instances to test')
+        else:
+            raise TypeError('Instances must be instance of django.db.models.Queryset, list or tuple')
+
         for instance in instances:
             if context is not None:
                 data = self.serializer_class(instance=instance, context=context).data
