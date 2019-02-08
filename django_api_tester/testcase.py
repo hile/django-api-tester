@@ -1,5 +1,6 @@
 
 import json
+import pytest
 
 from urllib.parse import urlencode
 
@@ -36,9 +37,10 @@ class BaseTestCase:
         return user, SUPERUSER_TEST_ARGS['password']
 
 
+@pytest.mark.model_tests
 class ModelTestCase(BaseTestCase, DjangoTestCase):
     """
-    Common base model unit test case for tukkimies
+    Common unit test case for model specific django tests
     """
 
     def setUp(self):
@@ -73,9 +75,17 @@ class ModelTestCase(BaseTestCase, DjangoTestCase):
             self.serializer_class().validate(attrs)
 
 
+@pytest.mark.serializer_tests
+class SerializerTestCase(BaseTestCase, DRFAPITestCase):
+    """
+    Common base test case for serializer specific django tests
+    """
+
+
+@pytest.mark.api_tests
 class APITestCase(BaseTestCase, DRFAPITestCase):
     """
-    Common base API test case for tukkimies
+    Common base test case for DRF API tests
     """
 
     def setUp(self):
