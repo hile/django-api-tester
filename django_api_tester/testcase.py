@@ -9,6 +9,8 @@ from django.db.models import QuerySet
 from django.http import HttpResponseRedirect
 from django.test import TestCase as DjangoTestCase
 from django.urls import reverse
+from django.test.client import RequestFactory
+
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.serializers import ValidationError
@@ -32,10 +34,24 @@ class BaseTestCase:
     model = None
     serializer_class = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.request_factory = RequestFactory()
+
     def create_superuser(self):
         user = get_user_model().objects.create_user(**SUPERUSER_TEST_ARGS)
         self.assertTrue(user.is_superuser)
         return user, SUPERUSER_TEST_ARGS['password']
+
+    def get_mock_request(self, method, path, **kwargs):
+        user = kwargs.pop('user', None)
+
+        if method not in ('get', 'post', 'put', 'patch', 'delete'):
+            raise ValueError('Unsupported request factory method; {}'.format(method))
+
+        request = getattr(self.request_factory, method)(path, **kwargs)
+        request.user = user
+        return request
 
 
 @pytest.mark.model_tests
