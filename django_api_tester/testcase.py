@@ -175,6 +175,19 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         """
         return url_pattern.item.callback.cls(action=action).get_serializer_class()
 
+    def get_page_size(self, data):
+        """
+        Get page size for response
+        """
+        if isinstance(data, dict):
+            page_size = data.get('page_size', None)
+            if page_size is None:
+                results = data.get('results', None)
+                if results is None:
+                    raise NotImplementedError('Error detecting page size from response data')
+        elif isinstance(data, list):
+            return len(data)
+
     def get_expected_queryset(self, url_pattern, expected_item_count=None):
         """
         Return expected query set
@@ -267,13 +280,23 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         if expected_result_count is None:
             expected_result_count = queryset.count()
 
+        if isinstance(response.data, dict):
+            if 'results' in response.data:
+                result_count = len(response.data['results'])
+            else:
+                raise ValueError('Unexpected django API response. You may need to override validate_result_set')
+        elif isinstance(response.data, list):
+            result_count = len(response.data)
+        else:
+            raise ValueError('Unexpected response data type. You may need to override validate_result_set')
+
         self.assertEqual(
-            len(response.data['results']),
+            result_count,
             expected_result_count,
             'Expected total {} {} results, received {}'.format(
                 expected_result_count,
                 view_name,
-                len(response.data['results']),
+                result_count,
             )
         )
 
@@ -373,7 +396,7 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
 
         # Get expected queryset and validate result set
         if expected_success_code == status.HTTP_200_OK:
-            queryset = self.get_expected_queryset(url_pattern, res.data['page_size'])
+            queryset = self.get_expected_queryset(url_pattern, self.get_page_size(res.data))
             self.validate_result_set(
                 view_name,
                 res,
@@ -413,7 +436,7 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
 
         # Get expected queryset and validate result set
         if expected_success_code == status.HTTP_200_OK:
-            queryset = self.get_expected_queryset(url_pattern, res.data['page_size'])
+            queryset = self.get_expected_queryset(url_pattern, self.get_page_size(res.data))
             self.validate_result_set(
                 view_name,
                 res,
