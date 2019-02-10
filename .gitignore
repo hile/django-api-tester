@@ -2,6 +2,7 @@
 /venv/
 /static/
 /media/*.csv
+/example/venv/
 /.cache/
 /.eggs/
 /.ssh/
@@ -21,6 +22,7 @@ npm-debug.log
 *.pem
 *.tar.gz
 *.db.gz
+*.sqlite3
 *.db
 *.pyc
 *.swp

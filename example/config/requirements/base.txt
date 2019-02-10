@@ -1,0 +1,4 @@
+Django==2.1.5
+django-environ==0.4.5
+djangorestframework==3.9.1
+-e file:..#egg=django_api_tester
