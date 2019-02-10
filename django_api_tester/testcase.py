@@ -181,9 +181,13 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         """
         if isinstance(data, dict):
             page_size = data.get('page_size', None)
-            if page_size is None:
+            if page_size is not None:
+                return int(page_size)
+            else:
                 results = data.get('results', None)
-                if results is None:
+                if results is not None:
+                    return len(results)
+                else:
                     raise NotImplementedError('Error detecting page size from response data')
         elif isinstance(data, list):
             return len(data)
