@@ -78,6 +78,15 @@ class Router:
             value = value[1:]
         return value
 
+    def get_url_pattern(self, url_pattern):
+        """
+        Get URL pattern by string presentation
+        """
+        for item in self.url_patterns:
+            if item.url_pattern == url_pattern:
+                return item
+        return None
+
 
 class RouterURLPattern:
     """
@@ -168,6 +177,15 @@ class APIRouters(list):
             self.append(Router(router))
 
         self.sort()
+
+    def get_router_for_namespace(self, namespace):
+        """
+        Get router for given namespace
+        """
+        for router in self:
+            if router.router.namespace == namespace:
+                return router
+        return None
 
     def get_view_url_pattern(self, view_name):
         """

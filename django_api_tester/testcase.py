@@ -79,7 +79,6 @@ class ModelTestCase(BaseTestCase, DjangoTestCase):
             dict,
             'Serializer validate() did not return dictionary'
         )
-        print('create', validated_attrs)
         return serializer.create(validated_attrs)
 
     def assertInvalidRecordValidationError(self, attrs):
