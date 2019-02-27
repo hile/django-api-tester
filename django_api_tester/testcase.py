@@ -143,6 +143,10 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
     Common base test case for DRF API tests
     """
 
+    # Set fields to not compare in record. These usually contain data that needs separate
+    # callback to compare correctly
+    compare_skipped_fields = ()
+
     def setUp(self):
         self.routers = APIRouters()
 
@@ -217,6 +221,8 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
 
         testserver_url_prefix = 'http://testserver'
         for key, value in data.items():
+            if key in self.compare_skipped_fields:
+                continue
             if key not in record:
                 raise ValidationError('Key {} not found in record {}'.format(key, record))
 
