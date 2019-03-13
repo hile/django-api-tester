@@ -176,7 +176,15 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         """
         Return serializer for specified URL pattern
         """
-        return url_pattern.item.callback.cls(action=action).get_serializer_class()
+        view = url_pattern.item.callback.cls(action=action)
+
+        if callable(getattr(view, 'get_serializer_class', None)):
+            return url_pattern.item.callback.cls(action=action).get_serializer_class()
+
+        elif getattr(view, 'serializer_class', None) is not None:
+            return view.serializer_class
+
+        raise NotImplementedError('View {} does not have serializer_class or get_serializer_class'.format(view))
 
     def get_page_size(self, data):
         """

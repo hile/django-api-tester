@@ -6,7 +6,7 @@ import re
 
 from django.conf import settings
 from django.urls import URLResolver
-from rest_framework import viewsets
+from rest_framework import viewsets, views
 
 IGNORE_ROUTER_NAMES = (None, 'admin', 'rest_framework')
 IGNORE_FORMAT = r'.(?P<format>[a-z0-9]+)/?'
@@ -16,16 +16,17 @@ class Router:
     """
     Custom class to represent API router for testing purposes
 
-    Links API viewsets to self.url_patterns
+    Links API views and view sets to self.url_patterns
     """
 
     def __init__(self, router):
         self.router = router
-        self.url_patterns = [
-            RouterURLPattern(self, item)
-            for item in self.router.url_patterns
-            if hasattr(item.callback, 'cls') and isinstance(item.callback.cls(), viewsets.GenericViewSet)
-        ]
+        self.url_patterns = []
+        for item in self.router.url_patterns:
+            if hasattr(item.callback, 'cls') and isinstance(item.callback.cls(), views.View):
+                self.url_patterns.append(RouterURLPattern(self, item))
+            if hasattr(item.callback, 'cls') and isinstance(item.callback.cls(), viewsets.GenericViewSet):
+                self.url_patterns.append(RouterURLPattern(self, item))
 
     def __repr__(self):
         return self.prefix
@@ -141,12 +142,15 @@ class RouterURLPattern:
     @property
     def queryset(self):
         """
-        Return queryset used with router
+        Return queryset used with router, or empty list if not defined
         """
-        if self.item.callback.cls.queryset is not None:
-            return self.item.callback.cls.queryset
-        else:
+        cls = self.item.callback.cls
+        if callable(getattr(cls(), 'get_queryset', None)):
             return self.item.callback.cls().get_queryset()
+        elif getattr(cls, 'queryset', None) is not None:
+            return self.item.callback.cls.queryset
+
+        raise NotImplementedError('View {} does not implement queryset or get_queryset'.format(cls))
 
     @property
     def view_name(self):
