@@ -254,13 +254,13 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         filling option lists in forms
         """
 
-        self.assertIsInstance(data, tuple)
+        self.assertTrue(isinstance(data, tuple) or isinstance(data, list))
 
         if expected_results_count is not None:
             self.assertEqual(len(data), expected_results_count)
 
         for option in data:
-            self.assertIsInstance(option, tuple)
+            self.assertTrue(isinstance(option, tuple) or isinstance(option, list))
             self.assertEqual(len(option), 2)
 
 
