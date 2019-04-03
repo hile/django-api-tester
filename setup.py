@@ -21,7 +21,7 @@ setup(
     author='Ilkka Tuohela',
     author_email='ilkka.tuohela@codento.com',
     install_requires=(
-        'Django>=2.1.0',
+        'Django>=2.1.6',
         'djangorestframework>=3.9.0',
     ),
     classifiers=[
