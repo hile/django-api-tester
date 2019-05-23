@@ -608,3 +608,23 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         res = self.client.delete(url)
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
         return res
+
+    def validate_create_invalid_records(self, user, password, view_name, records):
+        """
+        Try creating invalid records, ensure each attempt returns HTTP 400 error
+        """
+
+        url = reverse(view_name)
+
+        for data in records:
+            self.client.logout()
+            res = self.client.post(url, data)
+            self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+            self.client.login(**self.get_login_arguments(user, password))
+            res = self.client.post(url, data)
+            self.assertEqual(
+                res.status_code,
+                status.HTTP_400_BAD_REQUEST,
+                'Expected 400 got {}: {}'.format(res.status_code, res.data)
+            )
