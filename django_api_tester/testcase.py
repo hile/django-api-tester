@@ -10,6 +10,7 @@ from django.http import HttpResponseRedirect
 from django.test import TestCase as DjangoTestCase
 from django.urls import reverse
 from django.test.client import RequestFactory
+from django.conf import settings
 
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
@@ -19,7 +20,7 @@ from rest_framework.test import APITestCase as DRFAPITestCase
 from .routers import APIRouters
 
 # Test cases creating a django superuser account
-SUPERUSER_TEST_ARGS = {
+DEFAULT_SUPERUSER_TEST_ARGS = {
     'username': 'superuser',
     'email': 'superuser@example.com',
     'is_superuser': True,
@@ -38,10 +39,11 @@ class BaseTestCase:
         super().__init__(*args, **kwargs)
         self.request_factory = RequestFactory()
 
-    def create_superuser(self):
-        user = get_user_model().objects.create_user(**SUPERUSER_TEST_ARGS)
+    def create_superuser(self, ):
+        kwargs = getattr(settings, 'DJANGO_API_TESTER', {}).get('SUPERUSER_TEST_ARGS', DEFAULT_SUPERUSER_TEST_ARGS)
+        user = get_user_model().objects.create_user(**kwargs)
         self.assertTrue(user.is_superuser)
-        return user, SUPERUSER_TEST_ARGS['password']
+        return user, kwargs['password']
 
     def get_mock_request(self, method, path, **kwargs):
         user = kwargs.pop('user', None)
@@ -142,6 +144,7 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
     """
     Common base test case for DRF API tests
     """
+    expected_unauthorized_status_code = status.HTTP_401_UNAUTHORIZED
 
     # Set fields to not compare in record. These usually contain data that needs separate
     # callback to compare correctly
@@ -262,7 +265,6 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         for option in data:
             self.assertTrue(isinstance(option, tuple) or isinstance(option, list))
             self.assertEqual(len(option), 2)
-
 
     def validate_record(self, record, serializer, fields, allow_null_value=()):
         """
@@ -427,7 +429,7 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
 
     def validate_protected_api_listing(self, user, password, view_name,
                                        query_args=None, fields=None, allow_null_value=(),
-                                       expected_failure_code=status.HTTP_401_UNAUTHORIZED,
+                                       expected_failure_code=None,
                                        expected_success_code=status.HTTP_200_OK,
                                        expected_results_count=None):
         """
@@ -443,6 +445,8 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         self.client.logout()
 
         # Get URL as unauthenticated user, verify failure code
+        if expected_failure_code is None:
+            expected_failure_code = self.expected_unauthorized_status_code
         res = self.client.get(url)
         self.assertEqual(res.status_code, expected_failure_code)
 
