@@ -67,6 +67,7 @@ class ExampleAPITestCase(ExampleTestCase, APITestCase):
             'example:example-list'
         )
 
+
 class ExampleSerializerBaseTestCase(ExampleTestCase, SerializerTestCase):
     """
     Example serializer tests for example.Example model
@@ -92,7 +93,6 @@ class ExampleDetailsSerializerTestCase(ExampleSerializerBaseTestCase):
     """
 
     serializer_class = ExampleDetailsSerializer
-
 
 
 class ExampleUUIDTestCase:
@@ -161,6 +161,7 @@ class ExampleUUIDSerializerBaseTestCase(ExampleUUIDTestCase, SerializerTestCase)
             method='get',
             path=reverse('example:example-uuid-list'),
         )
+
 
 class ExampleUUIDListSerializerTestCase(ExampleUUIDSerializerBaseTestCase):
     """

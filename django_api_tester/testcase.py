@@ -525,7 +525,6 @@ class APITestCase(BaseTestCase, DRFAPITestCase):
         res = self.client.delete(url)
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
 
-
     def get_record(self, user, password, view_name, record_id):
         """
         Get detail record with record_id

@@ -3,6 +3,7 @@ from rest_framework import routers
 
 from .views import ExampleViewSet, ExampleUUIDViewSet
 
+
 class APIRootView(routers.APIRootView):
     """
     Root view for example API.
